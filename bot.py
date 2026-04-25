@@ -1,68 +1,69 @@
 import os
-import threading
 import requests
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import cloudinary
+import cloudinary.uploader
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-
-# ---------- HTTP сервер (чтобы Render не падал) ----------
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"OK")
-
-
-def run_http():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("", port), Handler)
-    server.serve_forever()
-
-
-# запускаем сервер в фоне
-threading.Thread(target=run_http).start()
-
-
-# ---------- токен ----------
+# --- настройки ---
 TOKEN = os.getenv("TELEGRAM_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("CLOUD_API_KEY"),
+    api_secret=os.getenv("CLOUD_API_SECRET")
+)
 
-# ---------- обработка сообщений ----------
+# --- обработка ---
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
 
     if message.photo:
-        photo = message.photo[-1]
-        file = await context.bot.get_file(photo.file_id)
-        photo_url = file.file_path
+        try:
+            # берем фото
+            photo = message.photo[-1]
+            file = await context.bot.get_file(photo.file_id)
 
-        text = message.caption if message.caption else ""
+            # скачиваем
+            local_path = "temp.jpg"
+            await file.download_to_drive(local_path)
 
-        # --- делим текст ---
-        if "---" in text:
-            photo_text, caption_text = text.split("---", 1)
-        else:
-            photo_text = text
-            caption_text = text
+            # грузим в cloudinary
+            upload = cloudinary.uploader.upload(local_path)
+            photo_url = upload["secure_url"]
 
-        # --- тут пока просто отправляем обратно (потом вставим генерацию картинки) ---
-        await message.reply_photo(photo=photo_url, caption=caption_text.strip())
+            # текст
+            text = message.caption if message.caption else ""
+
+            if "---" in text:
+                photo_text, caption_text = text.split("---", 1)
+            else:
+                photo_text = text
+                caption_text = text
+
+            # отправка в Make
+            requests.post(WEBHOOK_URL, json={
+                "image_url": photo_url,
+                "caption": caption_text.strip()
+            })
+
+            await message.reply_text("✅ Пост отправлен в Make")
+
+        except Exception as e:
+            await message.reply_text(f"❌ Ошибка: {e}")
 
     else:
         await message.reply_text("Отправь фото с текстом")
 
-
-# ---------- запуск бота ----------
+# --- запуск ---
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(MessageHandler(filters.ALL, handle_message))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_message))
 
     print("Бот запущен...")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
