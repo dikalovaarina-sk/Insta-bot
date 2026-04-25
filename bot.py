@@ -1,16 +1,9 @@
 import os
 import requests
-import asyncio
-from dotenv import load_dotenv
-
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-# загружаем .env
-load_dotenv()
-
-TOKEN = os.getenv("TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+# --- порт для Render (чтобы не падал) ---
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -25,47 +18,62 @@ def run_server():
     server.serve_forever()
 
 threading.Thread(target=run_server).start()
+# ---------------------------------------
+
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
 
+    # если пришло фото
     if message.photo:
         photo = message.photo[-1]
         file = await context.bot.get_file(photo.file_id)
-
         photo_url = file.file_path
-        text = message.caption if message.caption else "Без текста"
+
+        text = message.caption if message.caption else ""
+
+        # --- делим текст ---
+        if "---" in text:
+            photo_text, caption_text = text.split("---", 1)
+        else:
+            photo_text = text
+            caption_text = text
+
+        photo_text = photo_text.strip()
+        caption_text = caption_text.strip()
+
+        # делим текст на 2 строки для картинки
+        lines = photo_text.split("|")
+
+        text1 = lines[0].strip() if len(lines) > 0 else ""
+        text2 = lines[1].strip() if len(lines) > 1 else ""
 
         data = {
             "image_url": photo_url,
-            "text1": text,
-            "text2": ""
+            "text1": text1,
+            "text2": text2,
+            "caption": caption_text
         }
 
-        try:
-            requests.post(WEBHOOK_URL, json=data)
-            await message.reply_text("✅ Пост отправлен в Instagram")
-        except Exception as e:
-            await message.reply_text("❌ Ошибка отправки")
+        # отправляем в Make
+        requests.post(WEBHOOK_URL, json=data)
+
+        await message.reply_text("✅ Пост отправлен в Instagram")
 
     else:
         await message.reply_text("❗ Отправь фото с подписью")
 
 
-async def main():
+def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.ALL, handle_message))
 
     print("Бот запущен...")
-
-    await app.initialize()
-    await app.start()
-
-    # держим процесс живым
-    while True:
-        await asyncio.sleep(1000)
+    app.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
