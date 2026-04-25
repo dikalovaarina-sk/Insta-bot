@@ -47,8 +47,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await file.download_to_drive(local_path)
 
             # грузим в cloudinary
-            upload = cloudinary.uploader.upload(local_path)
-            photo_url = upload["secure_url"]
+            upload = cloudinary.uploader.upload(
+                local_path,
+                resource_type="image",
+                format="jpg"
+            )
+
+            photo_url = upload["secure_url"].replace("/upload/", "/upload/f_jpg/")
 
             # текст
             text = message.caption if message.caption else ""
