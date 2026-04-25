@@ -15,6 +15,10 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"OK")
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
 def run_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), Handler)
@@ -85,6 +89,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- запуск ---
 def main():
+    import asyncio
+
     print("START MAIN", flush=True)
 
     if not TOKEN:
@@ -94,6 +100,9 @@ def main():
     if not WEBHOOK_URL:
         print("ОШИБКА: WEBHOOK_URL не найден", flush=True)
         return
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.PHOTO, handle_message))
