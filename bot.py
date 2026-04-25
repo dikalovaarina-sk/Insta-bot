@@ -35,6 +35,7 @@ cloudinary.config(
 # --- обработка ---
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
+    print("Получено сообщение", flush=True)
 
     if message.photo:
         try:
@@ -54,6 +55,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             photo_url = upload["secure_url"].replace("/upload/", "/upload/f_jpg/")
+            print("Cloudinary URL:", photo_url, flush=True)
 
             # текст
             text = message.caption if message.caption else ""
@@ -65,10 +67,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 caption_text = text
 
             # отправка в Make
-            requests.post(WEBHOOK_URL, json={
+            response = requests.post(WEBHOOK_URL, json={
                 "image_url": photo_url,
                 "caption": caption_text.strip()
-            })
+            }, timeout=20)
+
+            print("Make status:", response.status_code, flush=True)
+            print("Make response:", response.text, flush=True)
 
             await message.reply_text("✅ Пост отправлен в Make")
 
