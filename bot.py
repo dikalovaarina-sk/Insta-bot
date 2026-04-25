@@ -85,10 +85,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- запуск ---
 def main():
+    print("START MAIN", flush=True)
+
+    if not TOKEN:
+        print("ОШИБКА: TELEGRAM_TOKEN не найден", flush=True)
+        return
+
+    if not WEBHOOK_URL:
+        print("ОШИБКА: WEBHOOK_URL не найден", flush=True)
+        return
+
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.PHOTO, handle_message))
 
-    print("Бот запущен...")
+    print("Бот запущен и слушает Telegram...", flush=True)
     app.run_polling()
 
 if __name__ == "__main__":
