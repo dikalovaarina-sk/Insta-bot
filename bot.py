@@ -3,9 +3,7 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-# --- порт для Render (чтобы не падал) ---
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
