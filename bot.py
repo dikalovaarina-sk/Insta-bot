@@ -3,6 +3,7 @@ import requests
 import cloudinary
 import cloudinary.uploader
 import threading
+import asyncio
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from textwrap import wrap
@@ -199,7 +200,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # --- запуск ---
-def main():
+async def main():
     print("START MAIN", flush=True)
 
     if not TOKEN:
@@ -214,7 +215,13 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_message))
 
     print("Бот запущен и слушает Telegram...", flush=True)
-    app.run_polling()
-    
+
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+
+    await asyncio.Event().wait()
+
+
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
