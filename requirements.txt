@@ -1,5 +1,7 @@
-python-telegram-bot==21.10
-requests
-cloudinary
-python-dotenv
+fastapi
+uvicorn
+python-multipart
 Pillow
+cloudinary
+requests
+python-dotenv
