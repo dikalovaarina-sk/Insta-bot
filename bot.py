@@ -215,7 +215,6 @@ def main():
 
     print("Бот запущен и слушает Telegram...", flush=True)
     app.run_polling()
-
-
+    
 if __name__ == "__main__":
     main()
