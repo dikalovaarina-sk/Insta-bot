@@ -151,7 +151,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # текст на фото
         # ---
         # подпись под постом
-        if "---" in text:
+        if "///" in text:
             photo_text, caption_text = text.split("---", 1)
         else:
             photo_text = text
